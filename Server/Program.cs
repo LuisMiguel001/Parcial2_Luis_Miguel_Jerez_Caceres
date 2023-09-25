@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.ResponseCompression;
+using Parcial2_Luis_Miguel_Jerez_Caceres.Server.DAL;
+using Parcial2_Luis_Miguel_Jerez_Caceres.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+var ConStr = builder.Configuration.GetConnectionString("ConStr");
+builder.Services.AddDbContextFactory<Context>(Options => Options.UseSqlite(ConStr));
 
 var app = builder.Build();
 

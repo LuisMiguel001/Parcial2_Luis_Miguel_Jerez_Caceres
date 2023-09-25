@@ -15,4 +15,9 @@
     <ProjectReference Include="..\Shared\Parcial2_Luis_Miguel_Jerez_Caceres.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\Consultas\" />
+    <Folder Include="Pages\Registros\" />
+  </ItemGroup>
+
 </Project>
