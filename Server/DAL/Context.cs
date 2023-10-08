@@ -9,6 +9,8 @@ public class Context : DbContext
         : base(Option) { }
 
     public DbSet<Entradas> Entradas { get; set; }
+    public DbSet<Productos> Productos { get; set; }
+    public DbSet<EntradasDetalle> EntradasDetalle { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
