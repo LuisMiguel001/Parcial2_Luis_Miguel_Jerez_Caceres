@@ -1,0 +1,406 @@
+﻿@page "/entrada"
+@inject HttpClient httpClient
+@inject NotificationService notificationService
+
+<EditForm Model="entradas" OnValidSubmit="Guardar">
+	<DataAnnotationsValidator />
+
+	<fieldset>
+		<div class="card">
+			<div class="card-header">
+				<h1>Entradas de productos empacados</h1>
+			</div>
+
+			<div class="card-body">
+				@*Buscar*@
+				<div class="col-xs-12 col-sm-12 col-md-8 col-lg-6 col-xl-4">
+					<label>Id</label>
+					<div class="input-group mb-3">
+						<InputNumber @bind-Value="entradas.EntradaId" class="form-control" aria-describedby="buscarButton" />
+						<button @onclick="Buscar" class="btn btn-outline-primary" type="button" id="buscarButton">
+							<i class="oi oi-magnifying-glass" />
+						</button>
+					</div>
+				</div>
+
+				@*Fecha*@
+				<div class="col-4">
+					<label class="form-laber">Fecha</label>
+					<InputDate @bind-Value="entradas.Fecha" class="form-control"></InputDate>
+					<ValidationMessage For="@(() => entradas.Fecha)" />
+				</div>
+
+				@*Concepto*@
+				<div class="mb-3">
+					<label class="form-label">Concepto</label>
+					<InputText @bind-Value="entradas.Concepto" class="form-control"></InputText>
+					<ValidationMessage For="@(() => entradas.Concepto)" />
+				</div>
+
+				<hr>
+
+				@*Utilizados*@
+				<fieldset class="border-success border border-1">
+					<div class="card-header">
+						<h3>Utilizados</h3>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<label>Producto: </label>
+							<InputSelect @bind-Value="entradasDetalle.ProductoId" class="form-select">
+								<option value="@entradas.ProductoId" hidden="hidden">[Seleccione]</option>
+								@foreach (var item in ProducList)
+								{
+									<option value="@item.ProductoId">@item.Descripcion</option>
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => entradasDetalle.ProductoId)" />
+						</div>
+
+						<div class="col-md-5">
+							<label>Cantidad</label>
+							<div class="input-group">
+								<InputNumber @bind-Value="entradasDetalle.CantidadUtilizada" class="form-control"></InputNumber>
+								<button type="button" class="btn btn-outline-success" @onclick="AgregarDetalle">Agregar <i class="oi oi-plus" /></button>
+								<ValidationMessage For="@(() => entradasDetalle.CantidadUtilizada)" />
+							</div>
+						</div>
+					</div>
+
+					<table class="table">
+						<thead>
+							<tr>
+								<th>ProductoID</th>
+								<th>Descripcion</th>
+								<th>Cantidad</th>
+							</tr>
+						</thead>
+
+						<tbody>
+
+							@foreach (var item in this.entradas.EntradasDetalles)
+							{
+								<tr>
+									<td>@item.ProductoId</td>
+									<td>@ObtenerDescripcion(item.ProductoId)</td>
+									<td>@item.CantidadUtilizada</td>
+									<td><button type="button" class="btn btn-outline-danger" @onclick=@(() => EliminarDetalle(item))><i class="oi oi-trash" /></button></td>
+								</tr>
+							}
+						</tbody>
+					</table>
+
+					@*Total*@
+					<div class="row justify-content-between">
+						<div class="col-2">
+							<label>Peso Total:</label>
+							<input @bind-value="PesoTotal" class="form-control" disabled />
+						</div>
+					</div>
+				</fieldset>
+
+				<hr>
+
+				@*Producido*@
+				<fieldset class="border-success border border-1">
+					<legend>Producido</legend>
+					<div class="row">
+						<div class="col-3">
+							<InputNumber @bind-Value="entradas.CantidadProducida" class="form-control" disabled></InputNumber>
+						</div>
+
+						<div class="col-2">
+							<input @bind-value="PesoTotal" class="form-control" disabled />
+						</div>
+					</div>
+				</fieldset>
+			</div>
+
+			<div class="card-footer d-flex justify-content-center">
+				<div class="btn-group">
+					<button type="button" class="btn btn-outline-primary" @onclick="Nuevo">Nuevo <i class="oi oi-file" /></button>
+					<button type="submit" class="btn btn-outline-success">Guardar <i class="oi oi-document" /></button>
+					<button type="button" class="btn btn-outline-danger" @onclick="Eliminar">Eliminar <i class="oi oi-trash" /></button>
+				</div>
+			</div>
+		</div>
+	</fieldset>
+</EditForm>
+
+@code
+{
+	[Parameter]
+	public int Cantidad { get; set; }
+	public int EntradaId { get; set; }
+	public int Total { get; set; } = 0;
+	public float PesoTotal { get; set; } = 0;
+	public Entradas entradas { get; set; } = new Entradas();
+	public Productos productos { get; set; } = new Productos();
+	public List<Productos> ProducList { get; set; } = new List<Productos>();
+	public EntradasDetalle entradasDetalle { get; set; } = new EntradasDetalle();
+
+	protected override async Task OnInitializedAsync()
+	{
+		var productos = await httpClient.GetFromJsonAsync<List<Productos>>("api/Productos");
+
+		if (productos is not null)
+		{
+			ProducList = productos;
+		}
+
+		if (EntradaId > 0)
+		{
+			entradas.EntradaId = EntradaId;
+			Buscar();
+		}
+	}
+
+	public void Nuevo()
+	{
+		entradas = new Entradas();
+		Total = 0;
+		notificationService.ShowNotification(
+			titulo: "Nuevo",
+			mensaje: "Vacio",
+			NotificationSeverity.Info
+		);
+	}
+
+	public async Task<bool> Buscar()
+	{
+		try
+		{
+			var entradaEncontrada = await httpClient.GetFromJsonAsync<Entradas>($"api/Entradas/{entradas.EntradaId}");
+
+			if (entradaEncontrada != null)
+			{
+				int Suma = 0;
+				entradas = entradaEncontrada;
+				entradas.EntradasDetalles = entradaEncontrada.EntradasDetalles.ToList();
+
+				foreach (var item in entradas.EntradasDetalles)
+				{
+					//Suma += item.CantidadUtilizada;
+					Total = Suma;
+				}
+
+				StateHasChanged();
+				notificationService.ShowNotification(
+					titulo: "Exito",
+					mensaje: "Entrada encontrada",
+					NotificationSeverity.Success
+				);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		catch
+		{
+			notificationService.ShowNotification(
+				titulo: "Error",
+				mensaje: "La entrada no fue encontrada",
+				NotificationSeverity.Error
+			);
+			return false;
+		}
+	}
+
+	private async Task<Productos> BuscarProductos(int ProductoId)
+	{
+		var producto = await httpClient.GetFromJsonAsync<Productos>($"api/Productos/{ProductoId}");
+
+		return producto ?? new Productos();
+	}
+
+	public bool Validar()
+	{
+		if (entradas.EntradaId < 0)
+		{
+			return false;
+		}
+		if (string.IsNullOrEmpty(entradas.Concepto))
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	public bool ValidarDetalle()
+	{
+		if (entradasDetalle.ProductoId < 0 && entradasDetalle.CantidadUtilizada < 0)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	public async Task Guardar()
+	{
+		if (Validar())
+		{
+			entradas.EntradasDetalles = entradas.EntradasDetalles.ToList();
+			using var response = await httpClient.PostAsJsonAsync("api/Entradas", entradas);
+
+			if (response.IsSuccessStatusCode)
+			{
+				var entradaDevuelta = await response.Content.ReadFromJsonAsync<Entradas>();
+
+				if (entradaDevuelta is not null)
+				{
+					entradas = entradaDevuelta;
+					Nuevo();
+					notificationService.ShowNotification(
+						titulo: "Exito",
+						mensaje: "Se guardo correctamente",
+						NotificationSeverity.Success
+					);
+				}
+				else
+				{
+					notificationService.ShowNotification(
+						titulo: "Error",
+						mensaje: "No se logro guardar",
+						NotificationSeverity.Error
+					);
+				}
+			}
+			else
+			{
+				notificationService.ShowNotification(
+						titulo: "Error",
+						mensaje: "Algo salio mal al guardar",
+						NotificationSeverity.Error
+					);
+			}
+		}
+	}
+
+	public async Task Eliminar()
+	{
+		using var response = await httpClient.DeleteAsync($"api/Entradas/{entradas.EntradaId}");
+		
+		if (Validar())
+		{
+
+			if (!response.IsSuccessStatusCode)
+			{
+
+				notificationService.ShowNotification(
+						titulo: "Error",
+						mensaje: "No se logro eliminar",
+						NotificationSeverity.Error
+					);
+				return;
+			}
+			else
+			{
+				Nuevo();
+				notificationService.ShowNotification(
+						titulo: "Exito",
+						mensaje: "Se elimino correctamente",
+						NotificationSeverity.Success
+					);
+			}
+		}
+	}
+
+	public async Task AgregarDetalle()
+	{
+		if (ValidarDetalle())
+		{
+			var producto = await BuscarProductos(entradasDetalle.ProductoId);
+
+			if (producto != null)
+			{
+				float Suma = 0;
+
+				if (entradasDetalle.CantidadUtilizada > producto.Existencia)
+				{
+					notificationService.ShowNotification(
+						titulo: "Aviso",
+						mensaje: "La cantidad es mayor que la existencia del producto",
+						NotificationSeverity.Warning
+					);
+					return;
+				}
+
+				entradasDetalle.EntradaId = entradas.EntradaId;
+				entradas.EntradasDetalles.Add(entradasDetalle);
+				entradasDetalle = new EntradasDetalle();
+
+				foreach (var item in entradas.EntradasDetalles)
+				{
+					Suma += item.CantidadUtilizada;
+				}
+
+				PesoTotal = Suma;
+				entradas.CantidadProducida = PesoTotal * 2;
+			}
+		}
+	}
+
+
+	//public async Task AgregarDetalle()
+	//{
+	//	if (ValidarDetalle())
+	//	{
+	//		var producto = await BuscarProductos(entradasDetalle.ProductoId);
+
+	//		if (producto != null)
+	//		{
+	//			int Suma = 0;
+
+	//			if (entradasDetalle.CantidadUtilizada > producto.Existencia)
+	//			{
+	//				notificationService.ShowNotification(
+	//					titulo: "Aviso",
+	//					mensaje: "La cantidad es mayor que la existencia del producto",
+	//					NotificationSeverity.Warning
+	//				);
+	//				return;
+	//			}
+
+	//			entradasDetalle.EntradaId = entradas.EntradaId;
+	//			entradas.EntradasDetalles.Add(entradasDetalle);
+	//			entradasDetalle = new EntradasDetalle();
+
+	//			foreach (var item in entradas.EntradasDetalles)
+	//			{
+	//				//Suma += item.CantidadUtilizada;
+	//				Total = Suma;
+	//			}
+	//			entradas.CantidadProducida = Total * 2;
+	//		}
+	//	}
+	//}
+
+	public void EliminarDetalle(EntradasDetalle detalle)
+	{
+		entradas.EntradasDetalles.Remove(detalle);
+
+		PesoTotal = entradas.EntradasDetalles.Sum(t => t.CantidadUtilizada);
+		entradas.CantidadProducida = PesoTotal * 2;
+	}
+
+
+	//public void EliminarDetalle(EntradasDetalle detalle)
+	//{
+	//	entradas.EntradasDetalles.Remove(detalle);
+	//	//Total = this.entradas.EntradasDetalles.Sum(t => t.CantidadUtilizada);
+	//	entradas.CantidadProducida = Total * 2;
+	//}
+
+	public string ObtenerDescripcion(int Id)
+	{
+		return ProducList.Where(p => p.ProductoId == Id).FirstOrDefault().Descripcion;
+	}
+}

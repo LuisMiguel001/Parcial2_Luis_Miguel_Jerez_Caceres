@@ -1,0 +1,122 @@
+﻿@page "/c_Entradas"
+@inject HttpClient httpClient
+@inject NotificationService notificationService
+
+<div class="card">
+	<div class="card">
+
+		<div class="card-header">
+			<h3> Consulta de Productos  </h3>
+		</div>
+
+		<div class="card-body">
+			<form>
+				<div class="input-group mb-3">
+					<input type="number" @bind="EntradaId" class="form-control" placeholder="IngresoId" />
+					<input type="text" @bind="Concepto" class="form-control" placeholder="Concepto" />
+					<input type="date" @bind="FechaInicio" class="form-control" />
+					<input type="date" @bind="FechaFin" class="form-control" />
+					<button @onclick="Buscar" class="btn btn-outline-primary" type="button" id="buscarButton">
+						<i class="oi oi-magnifying-glass" />
+					</button>
+					<button @onclick="LimpiarFiltros" class="btn btn-outline-secondary" type="button">
+						<i class="oi oi-trash" /> Limpiar
+					</button>
+				</div>
+			</form>
+		</div>
+
+		@if (lista != null)
+		{
+			<div class="card-body">
+				<table class="table table-striped table-hover">
+					<thead>
+						<tr>
+							<th>EntradaId</th>
+							<th>Fecha</th>
+							<th>Concepto</th>
+							<th>Peso Total</th>
+							<th>Cantidad Producida</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var entradas in lista)
+						{
+							<tr>
+								<td>@entradas.EntradaId</td>
+								<td>@entradas.Fecha</td>
+								<td>@entradas.Concepto</td>
+								<td>@entradas.PesoTotal</td>
+								<td>@entradas.CantidadProducida</td>
+								<td><a class="btn btn-outline-primary" href="entrada/@entradas.EntradaId">Ver</a></td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+
+	<div class="card-footer">
+		<div class="form-row justify-content-sm-between" aria-orientation="vertical">
+			<div class="col-3">
+				<label for="CantidaRegistro" class="col-form-label"><strong>Filas</strong>&nbsp;</label>
+				<input id="CantidaRegistro" @bind-value="@conteo" disabled class="form-control" />
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	public int conteo { get; set; }
+	public int EntradaId { get; set; }
+	public List<Entradas>? Entradas { get; set; }
+	public string? filtro { get; set; }
+	public string? Criterio { get; set; }
+	public List<Entradas> lista { get; set; } = new List<Entradas>();
+	public string Concepto { get; set; } = "";
+	public DateTime FechaInicio { get; set; }
+	public DateTime FechaFin { get; set; }
+
+	public void LimpiarFiltros()
+	{
+		EntradaId = 0;
+		Concepto = string.Empty;
+		FechaInicio = DateTime.MinValue;
+		FechaFin = DateTime.MinValue;
+	}
+
+	public async Task Buscar()
+	{
+		var response = await httpClient.GetAsync("api/Entradas");
+
+		if (response.IsSuccessStatusCode)
+		{
+			var entradas = await response.Content.ReadFromJsonAsync<List<Entradas>>();
+
+			if (entradas != null)
+			{
+				lista = entradas.Where(entrada =>
+					(EntradaId == 0 || entrada.EntradaId == EntradaId) &&
+					(string.IsNullOrWhiteSpace(Concepto) || entrada.Concepto.Contains(Concepto)) &&
+					(FechaInicio == DateTime.MinValue || entrada.Fecha >= FechaInicio) &&
+					(FechaFin == DateTime.MinValue || entrada.Fecha <= FechaFin)
+				).ToList();
+				conteo = lista.Count;
+			}
+			else
+			{
+				lista = new List<Entradas>();
+				conteo = 0;
+			}
+		}
+		else
+		{
+			notificationService.ShowNotification(
+				titulo: "Error",
+				mensaje: "No se encontro nada relacionado",
+				NotificationSeverity.Error
+			);
+		}
+	}
+}
