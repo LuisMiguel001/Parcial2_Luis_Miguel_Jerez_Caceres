@@ -19,13 +19,11 @@ public class Entradas
     [Required(ErrorMessage = "El concepto es obligatorio")]
     public string Concepto { get; set; } = string.Empty;
 
-    public int PesoTotal { get; set; }
+    public float PesoTotal { get; set; }
 
-    [Required(ErrorMessage = "El ProductodId obligatorio")]
     public int ProductoId { get; set; }
 
-    [Required(ErrorMessage = "La cantidad utilizada es obligatoria")]
-    public int CantidadProducida { get; set; }
+    public float CantidadProducida { get; set; }
 
     [ForeignKey("EntradaId")]
     public List<EntradasDetalle> EntradasDetalles { get; set; } = new List<EntradasDetalle>();

@@ -17,5 +17,5 @@ public class EntradasDetalle
 
     public int ProductoId { get; set; }
 
-    public int CantidadUtilizada { get; set; }
+    public float CantidadUtilizada { get; set; }
 }
