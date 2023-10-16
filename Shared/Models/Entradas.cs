@@ -12,11 +12,12 @@ public class Entradas
 {
     [Key]
 
-    public int EntradaId { get; set; }
+	[Required(ErrorMessage = "El ID es requerido")]
+	public int EntradaId { get; set; }
 
     public DateTime Fecha { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "El concepto es obligatorio")]
+    [Required(ErrorMessage = "El concepto es requerido")]
     public string Concepto { get; set; } = string.Empty;
 
     public float PesoTotal { get; set; }

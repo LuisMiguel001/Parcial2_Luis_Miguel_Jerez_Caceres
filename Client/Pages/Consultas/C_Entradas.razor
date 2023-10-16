@@ -35,7 +35,6 @@
 							<th>EntradaId</th>
 							<th>Fecha</th>
 							<th>Concepto</th>
-							<th>Peso Total</th>
 							<th>Cantidad Producida</th>
 						</tr>
 					</thead>
@@ -46,7 +45,6 @@
 								<td>@entradas.EntradaId</td>
 								<td>@entradas.Fecha</td>
 								<td>@entradas.Concepto</td>
-								<td>@entradas.PesoTotal</td>
 								<td>@entradas.CantidadProducida</td>
 								<td><a class="btn btn-outline-primary" href="entrada/@entradas.EntradaId">Ver</a></td>
 							</tr>
@@ -78,6 +76,11 @@
 	public DateTime FechaInicio { get; set; }
 	public DateTime FechaFin { get; set; }
 
+	protected override async Task OnInitializedAsync()
+	{
+		await Buscar();
+	}
+
 	public void LimpiarFiltros()
 	{
 		EntradaId = 0;
@@ -98,7 +101,7 @@
 			{
 				lista = entradas.Where(entrada =>
 					(EntradaId == 0 || entrada.EntradaId == EntradaId) &&
-					(string.IsNullOrWhiteSpace(Concepto) || entrada.Concepto.Contains(Concepto)) &&
+					(string.IsNullOrWhiteSpace(Concepto) || entrada.Concepto.IndexOf(Concepto, StringComparison.OrdinalIgnoreCase) >= 0) &&
 					(FechaInicio == DateTime.MinValue || entrada.Fecha >= FechaInicio) &&
 					(FechaFin == DateTime.MinValue || entrada.Fecha <= FechaFin)
 				).ToList();
@@ -120,3 +123,4 @@
 		}
 	}
 }
+

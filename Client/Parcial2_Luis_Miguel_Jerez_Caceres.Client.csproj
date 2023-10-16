@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Shared\Parcial2_Luis_Miguel_Jerez_Caceres.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\Imagenes\" />
+  </ItemGroup>
+
 </Project>

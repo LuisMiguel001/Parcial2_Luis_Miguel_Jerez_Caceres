@@ -1,4 +1,5 @@
 ﻿@page "/entrada"
+@page "/entrada/{EntradaId:int}"
 @inject HttpClient httpClient
 @inject NotificationService notificationService
 
@@ -14,9 +15,9 @@
 			<div class="card-body">
 				@*Buscar*@
 				<div class="col-xs-12 col-sm-12 col-md-8 col-lg-6 col-xl-4">
-					<label>Id</label>
 					<div class="input-group mb-3">
-						<InputNumber @bind-Value="entradas.EntradaId" class="form-control" aria-describedby="buscarButton" />
+						<span class="input-group-text">ID</span>
+						<InputNumber @bind-Value="entradas.EntradaId" class="form-control" aria-describedby="buscarButton" min="1" />
 						<button @onclick="Buscar" class="btn btn-outline-primary" type="button" id="buscarButton">
 							<i class="oi oi-magnifying-glass" />
 						</button>
@@ -24,20 +25,26 @@
 				</div>
 
 				@*Fecha*@
-				<div class="col-4">
-					<label class="form-laber">Fecha</label>
-					<InputDate @bind-Value="entradas.Fecha" class="form-control"></InputDate>
-					<ValidationMessage For="@(() => entradas.Fecha)" />
+				<div class="col-md-4">
+					<div class="input-group">
+						<span class="input-group-text">Fecha</span>
+						<InputDate @bind-Value="entradas.Fecha" class="form-control"></InputDate>
+						<ValidationMessage For="@(() =>entradas.Fecha)" />
+					</div>
 				</div>
+
+				<br>
 
 				@*Concepto*@
-				<div class="mb-3">
-					<label class="form-label">Concepto</label>
-					<InputText @bind-Value="entradas.Concepto" class="form-control"></InputText>
-					<ValidationMessage For="@(() => entradas.Concepto)" />
+				<div class="col-md-15">
+					<div class="input-group">
+						<span class="input-group-text">Concepto</span>
+						<InputText @bind-Value="entradas.Concepto" class="form-control"></InputText>
+					</div>
+						<ValidationMessage For="@(() => entradas.Concepto)"/>
 				</div>
 
-				<hr>
+				<br>
 
 				@*Utilizados*@
 				<fieldset class="border-success border border-1">
@@ -71,7 +78,7 @@
 						<thead>
 							<tr>
 								<th>ProductoID</th>
-								<th>Descripcion</th>
+								<th>Descripci&oacute;n</th>
 								<th>Cantidad</th>
 							</tr>
 						</thead>
@@ -99,7 +106,7 @@
 					</div>
 				</fieldset>
 
-				<hr>
+				<br>
 
 				@*Producido*@
 				<fieldset class="border-success border border-1">
@@ -130,8 +137,8 @@
 @code
 {
 	[Parameter]
-	public int Cantidad { get; set; }
 	public int EntradaId { get; set; }
+	public int Cantidad { get; set; }
 	public int Total { get; set; } = 0;
 	public float PesoTotal { get; set; } = 0;
 	public Entradas entradas { get; set; } = new Entradas();
@@ -158,6 +165,7 @@
 	public void Nuevo()
 	{
 		entradas = new Entradas();
+		entradasDetalle = new EntradasDetalle();
 		Total = 0;
 		notificationService.ShowNotification(
 			titulo: "Nuevo",
@@ -180,7 +188,6 @@
 
 				foreach (var item in entradas.EntradasDetalles)
 				{
-					//Suma += item.CantidadUtilizada;
 					Total = Suma;
 				}
 
@@ -233,13 +240,18 @@
 
 	public bool ValidarDetalle()
 	{
-		if (entradasDetalle.ProductoId < 0 && entradasDetalle.CantidadUtilizada < 0)
+		if (entradasDetalle.ProductoId != 0 && entradasDetalle.CantidadUtilizada != 0)
 		{
-			return false;
+			return true;
 		}
 		else
 		{
-			return true;
+			notificationService.ShowNotification(
+				titulo: "Aviso",
+				mensaje: "Para agregar un detalle, primero debe rellenar todos los campos",
+				NotificationSeverity.Warning
+			);
+			return false;
 		}
 	}
 
@@ -287,7 +299,7 @@
 	public async Task Eliminar()
 	{
 		using var response = await httpClient.DeleteAsync($"api/Entradas/{entradas.EntradaId}");
-		
+
 		if (Validar())
 		{
 
@@ -348,56 +360,22 @@
 		}
 	}
 
-
-	//public async Task AgregarDetalle()
-	//{
-	//	if (ValidarDetalle())
-	//	{
-	//		var producto = await BuscarProductos(entradasDetalle.ProductoId);
-
-	//		if (producto != null)
-	//		{
-	//			int Suma = 0;
-
-	//			if (entradasDetalle.CantidadUtilizada > producto.Existencia)
-	//			{
-	//				notificationService.ShowNotification(
-	//					titulo: "Aviso",
-	//					mensaje: "La cantidad es mayor que la existencia del producto",
-	//					NotificationSeverity.Warning
-	//				);
-	//				return;
-	//			}
-
-	//			entradasDetalle.EntradaId = entradas.EntradaId;
-	//			entradas.EntradasDetalles.Add(entradasDetalle);
-	//			entradasDetalle = new EntradasDetalle();
-
-	//			foreach (var item in entradas.EntradasDetalles)
-	//			{
-	//				//Suma += item.CantidadUtilizada;
-	//				Total = Suma;
-	//			}
-	//			entradas.CantidadProducida = Total * 2;
-	//		}
-	//	}
-	//}
-
 	public void EliminarDetalle(EntradasDetalle detalle)
 	{
+		var detalleEliminado = new EntradasDetalle
+			{
+				ProductoId = detalle.ProductoId,
+				CantidadUtilizada = detalle.CantidadUtilizada
+			};
+
 		entradas.EntradasDetalles.Remove(detalle);
 
 		PesoTotal = entradas.EntradasDetalles.Sum(t => t.CantidadUtilizada);
 		entradas.CantidadProducida = PesoTotal * 2;
+
+		entradasDetalle.ProductoId = detalleEliminado.ProductoId;
+		entradasDetalle.CantidadUtilizada = detalleEliminado.CantidadUtilizada;
 	}
-
-
-	//public void EliminarDetalle(EntradasDetalle detalle)
-	//{
-	//	entradas.EntradasDetalles.Remove(detalle);
-	//	//Total = this.entradas.EntradasDetalles.Sum(t => t.CantidadUtilizada);
-	//	entradas.CantidadProducida = Total * 2;
-	//}
 
 	public string ObtenerDescripcion(int Id)
 	{

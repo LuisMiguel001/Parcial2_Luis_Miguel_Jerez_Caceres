@@ -15,7 +15,9 @@ public class EntradasDetalle
 
     public int EntradaId { get; set; }
 
-    public int ProductoId { get; set; }
+	[Required(ErrorMessage = "Debe elegir un producto")]
+	public int ProductoId { get; set; }
 
+    [Required(ErrorMessage ="La cantidad debe ser mayor que 0")]
     public float CantidadUtilizada { get; set; }
 }
